@@ -56,6 +56,7 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
 
       // Refresh history so new row appears at top
       const data = await fetchOptimizationHistory(product.asin);
+
       const formatted = data.map((row) => ({
         date: new Date(row.created_at).toLocaleDateString("en-US", {
           month: "short",
@@ -92,7 +93,6 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
     const loadHistory = async () => {
       try {
         const data = await fetchOptimizationHistory(product.asin);
-        console.log(data);
         // map DB → UI format
         const formatted = data.map((row) => ({
           date: new Date(row.created_at).toLocaleDateString("en-US", {

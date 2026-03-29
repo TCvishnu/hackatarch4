@@ -67,6 +67,7 @@ app.get("/optimization-history/:asin", async (req, res) => {
         po.current_price,
         po.recommended_price,
         po.reasoning,
+        po.suggested_title,
         po.created_at,
         po.context
       FROM price_optimizations po
