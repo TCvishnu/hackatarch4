@@ -280,7 +280,7 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
                     <SparkleIcon className="opacity-70 flex-shrink-0" />$
                     {row.suggestion.toFixed(2)}
                   </span>
-                  <span className="text-[12px] text-[#888] self-center truncate pr-3">
+                  <span className="text-[12px] text-[#888] self-center">
                     {row.titleSuggestion ? (
                       <span className="text-gold font-medium">
                         {row.titleSuggestion}
