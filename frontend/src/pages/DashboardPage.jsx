@@ -1,17 +1,19 @@
 // src/pages/DashboardPage.jsx
 
-import { DiamondIcon, DiamondFilledIcon, ArrowLeftIcon } from "../components/Icons";
+import {
+  DiamondIcon,
+  DiamondFilledIcon,
+  ArrowLeftIcon,
+} from "../components/Icons";
 
 export default function DashboardPage({ brands, onSelectProduct, onBack }) {
   const brand = brands[0]; // We always show one searched brand
 
   return (
     <div className="relative min-h-screen bg-[#080808] font-mono text-[#e2e2e2]">
-
       {/* ── Top bar ─────────────────────────────────────── */}
       <header className="relative z-10 border-b border-[#181818] px-8 py-6 inner-shadow animate-fade-in">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-
           {/* Logo + back */}
           <div className="flex items-center gap-4">
             <button
@@ -45,7 +47,8 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
                 {brand.brandName}
               </span>
               <span className="text-[10px] text-[#333] ml-1">
-                · {brand.products.length} product{brand.products.length !== 1 ? "s" : ""}
+                · {brand.products.length} product
+                {brand.products.length !== 1 ? "s" : ""}
               </span>
             </div>
           )}
@@ -99,7 +102,8 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
                         ${product.price.toFixed(2)}
                       </span>
                       <span className="text-[10px] text-[#2e2e2e]">
-                        {product.history.length} run{product.history.length !== 1 ? "s" : ""}
+                        {product.history.length} run
+                        {product.history.length !== 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>

@@ -64,14 +64,14 @@ export default function SearchPage({ onSearch }) {
   return (
     <div className="relative min-h-screen bg-[#080808] font-mono text-[#e2e2e2] flex flex-col">
       {/* ── Top bar ─────────────────────────────────── */}
-      <header className="relative z-10 border-b border-[#181818] px-8 py-6 inner-shadow animate-fade-in">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
+      <header className="relative z-10 border-b border-[#181818] py-6 inner-shadow animate-fade-in">
+        <div className="max-w-4xl px-6 flex items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 blur-md bg-gold/20 rounded-full" />
             <DiamondIcon size={22} color="#f5c842" />
           </div>
-          <span className="font-syne text-[22px] font-extrabold tracking-[-0.04em] text-white">
-            PriceAgent
+          <span className="font-syne text-3xl font-extrabold tracking-[-0.04em] text-white">
+            PriceHub
           </span>
         </div>
       </header>
@@ -94,7 +94,10 @@ export default function SearchPage({ onSearch }) {
             <h1 className="font-syne text-[36px] font-extrabold text-white leading-[1.1] tracking-[-0.03em]">
               Search a Brand
             </h1>
-            <p className="text-[13px] text-[#444] leading-relaxed max-w-sm mx-auto">
+            <p
+              className="text-[13px] leading-relaxed max-w-sm mx-auto"
+              style={{ color: "#FFD700" }}
+            >
               Enter a brand name to view its product catalogue and run AI
               pricing optimization.
             </p>
@@ -224,7 +227,7 @@ export default function SearchPage({ onSearch }) {
 
           {/* Quick-pick pills — all available brands */}
           <div className="flex flex-col items-center gap-3 animate-fade-in stagger-3">
-            <p className="text-[10px] text-[#2e2e2e] uppercase tracking-widest">
+            <p className="text-[10px] text-[#575454] uppercase tracking-widest">
               Available brands
             </p>
             <div className="flex flex-wrap justify-center gap-2">
@@ -233,7 +236,7 @@ export default function SearchPage({ onSearch }) {
                   key={b.id}
                   onClick={() => handleSelect(b)}
                   className="
-                    text-[11px] text-[#444] border border-[#1a1a1a]
+                    text-[11px] text-white border border-[#1a1a1a]
                     hover:border-gold/30 hover:text-gold/80
                     px-3 py-1.5 rounded-lg
                     transition-all duration-150
