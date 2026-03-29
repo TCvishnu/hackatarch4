@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.jsx
-
+import PriceHubLogo from "../assets/latest.png";
 import {
   DiamondIcon,
   DiamondFilledIcon,
@@ -12,30 +12,33 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
   return (
     <div className="relative min-h-screen bg-[#080808] font-mono text-[#e2e2e2]">
       {/* ── Top bar ─────────────────────────────────────── */}
-      <header className="relative z-10 border-b border-[#181818] px-8 py-6 inner-shadow animate-fade-in">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+      <header className="relative z-10 border-b border-[#181818] py-6 inner-shadow animate-fade-in">
+        <div className="max-w-4xl px-6 flex items-center justify-between gap-4 flex-wrap">
           {/* Logo + back */}
           <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full blur-md bg-gold/20" />
+                {/* <DiamondIcon size={20} color="#f5c842" /> */}
+              </div>
+              <img
+                src={PriceHubLogo}
+                alt="PriceHub"
+                className="h-10 object-contain" // adjust height as needed
+              />
+
+              <button
+                onClick={onBack}
+                className="
                 flex items-center gap-2
                 text-[11px] text-[#444] uppercase tracking-widest
                 border border-[#1e1e1e] hover:border-[#2e2e2e] hover:text-[#888]
                 px-3 py-2 rounded-lg transition-all duration-200
               "
-            >
-              <ArrowLeftIcon />
-              Search
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full blur-md bg-gold/20" />
-                <DiamondIcon size={20} color="#f5c842" />
-              </div>
-              <span className="font-syne text-[20px] font-extrabold tracking-[-0.04em] text-white">
-                PriceAgent
-              </span>
+              >
+                <ArrowLeftIcon />
+                Search
+              </button>
             </div>
           </div>
 
@@ -108,26 +111,22 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
                     </div>
                   </div>
 
-                  {/* Optimize button */}
+                  {/* Run Optimization button */}
                   <button
                     onClick={() => onSelectProduct(product, b.brandName)}
-                    title="Run optimization"
                     className="
-                      flex-shrink-0 w-10 h-10
-                      flex items-center justify-center
-                      rounded-xl border border-[#252525]
-                      bg-transparent
-                      hover:border-gold/40 hover:bg-gold/5
-                      active:scale-95
-                      transition-all duration-200
-                      group/btn
-                    "
+    flex-shrink-0
+    px-4 py-2
+    text-[11px] font-syne font-bold uppercase tracking-[0.04em]
+    rounded-xl
+    border border-yellow-400 text-yellow-400
+    bg-transparent
+    hover:bg-yellow-400/10 hover:border-yellow-300
+    active:scale-95
+    transition-all duration-200
+  "
                   >
-                    <DiamondIcon
-                      size={17}
-                      color="#f5c842"
-                      className="transition-transform duration-150 group-hover/btn:scale-110"
-                    />
+                    Run Optimization
                   </button>
                 </div>
               ))}

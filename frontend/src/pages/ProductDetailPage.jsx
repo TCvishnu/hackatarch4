@@ -168,8 +168,8 @@ Based on these trends and today's date context, what should the next optimal pri
   return (
     <div className="relative min-h-screen bg-[#080808] font-mono text-[#e2e2e2]">
       {/* Header */}
-      <header className="relative z-10 border-b border-[#181818] px-8 py-5 inner-shadow animate-fade-in">
-        <div className="max-w-4xl mx-auto flex items-start justify-between gap-4 flex-wrap">
+      <header className="relative z-10 border-b border-[#181818] py-5 inner-shadow animate-fade-in">
+        <div className="px-6 mx-auto flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4">
             <button
               onClick={onBack}

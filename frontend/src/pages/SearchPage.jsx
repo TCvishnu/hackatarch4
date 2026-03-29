@@ -1,5 +1,5 @@
 // src/pages/SearchPage.jsx
-
+import PriceHubLogo from "../assets/latest.png";
 import { useState, useRef } from "react";
 import { brands } from "../data/brands";
 import { DiamondIcon, SparkleIcon } from "../components/Icons";
@@ -68,11 +68,13 @@ export default function SearchPage({ onSearch }) {
         <div className="max-w-4xl px-6 flex items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 blur-md bg-gold/20 rounded-full" />
-            <DiamondIcon size={22} color="#f5c842" />
+            {/* <DiamondIcon size={22} color="#f5c842" /> */}
           </div>
-          <span className="font-syne text-3xl font-extrabold tracking-[-0.04em] text-white">
-            PriceHub
-          </span>
+          <img
+            src={PriceHubLogo}
+            alt="PriceHub"
+            className="h-10 object-contain" // adjust height as needed
+          />
         </div>
       </header>
 
@@ -134,7 +136,7 @@ export default function SearchPage({ onSearch }) {
                 placeholder="e.g. NovaTech Electronics…"
                 className="
                   flex-1 bg-transparent outline-none border-none
-                  text-[14px] text-white placeholder-[#2e2e2e]
+                  text-[14px] text-white placeholder-[#666565]
                   font-mono tracking-wide
                 "
               />
@@ -207,19 +209,19 @@ export default function SearchPage({ onSearch }) {
               disabled={!query.trim()}
               className={`
                 w-full flex items-center justify-center gap-2.5
-                py-3.5 rounded-xl
+                py-3.5 rounded-xl 
                 font-syne text-[13px] font-bold tracking-[0.04em]
                 border transition-all duration-200
                 ${
                   !query.trim()
-                    ? "border-[#1e1e1e] text-[#333] bg-[#0d0d0d] cursor-not-allowed"
+                    ? "border-[#1e1e1e] text-[#666565] bg-[#0d0d0d] cursor-not-allowed"
                     : "border-gold/50 text-gold bg-gold/5 hover:bg-gold/10 hover:border-gold cursor-pointer active:scale-[0.98]"
                 }
               `}
             >
               <DiamondIcon
                 size={14}
-                color={query.trim() ? "#f5c842" : "#333"}
+                color={query.trim() ? "#f5c842" : "#666565"}
               />
               Search Brand
             </button>
@@ -227,7 +229,7 @@ export default function SearchPage({ onSearch }) {
 
           {/* Quick-pick pills — all available brands */}
           <div className="flex flex-col items-center gap-3 animate-fade-in stagger-3">
-            <p className="text-[10px] text-[#575454] uppercase tracking-widest">
+            <p className="text-[10px] text-[#6f6e6e] uppercase tracking-widest">
               Available brands
             </p>
             <div className="flex flex-wrap justify-center gap-2">
