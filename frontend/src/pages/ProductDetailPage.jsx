@@ -47,11 +47,50 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
   const [chatLoading, setChatLoading] = useState(false);
   const [currentDeepDiveContext, setCurrentDeepDiveContext] = useState("");
 
+  const handleRunAgent = async () => {
+    setRunning(true);
+    setRunDone(false);
+
+    try {
+      const result = await optimizeProduct(product.asin);
+
+      // Refresh history so new row appears at top
+      const data = await fetchOptimizationHistory(product.asin);
+      const formatted = data.map((row) => ({
+        date: new Date(row.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        price: Number(row.current_price),
+        suggestion: Number(row.recommended_price),
+        reason: row.reasoning,
+        titleSuggestion: row.suggested_title,
+        salesImpact: row.context,
+      }));
+      setHistory(formatted.reverse());
+
+      // Update page title if agent suggested one
+      const suggestedTitle = result.decision?.suggested_title;
+      if (suggestedTitle && suggestedTitle !== product.product_name) {
+        setPageTitle(suggestedTitle);
+        setTitleUpdated(true);
+      }
+
+      setRunDone(true);
+      // Auto-expand the newest row
+      setExpandedRow(0);
+    } catch (err) {
+      console.error("Agent run failed", err);
+    } finally {
+      setRunning(false);
+    }
+  };
+
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const data = await fetchOptimizationHistory(product.asin);
-
+        console.log(data);
         // map DB → UI format
         const formatted = data.map((row) => ({
           date: new Date(row.created_at).toLocaleDateString("en-US", {
@@ -65,8 +104,9 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
           salesImpact: row.context,
         }));
 
-        setHistory(formatted.reverse()); // latest first
+        setHistory(formatted.reverse() || []); // latest first
       } catch (err) {
+        setHistory([]);
         console.error("Failed to load history", err);
       }
     };
@@ -120,6 +160,7 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
           {/* Run Agent Button */}
           <button
             disabled={running}
+            onClick={handleRunAgent}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[12px] font-medium tracking-[0.04em] border transition-all duration-200 ${
               running
                 ? "border-[#222] text-[#444] bg-[#0d0d0d] cursor-not-allowed"
