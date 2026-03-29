@@ -1,5 +1,5 @@
 // src/pages/SearchPage.jsx
-
+import { fetchBrandProducts } from "../api";
 import { useState, useRef } from "react";
 import { brands } from "../data/brands";
 import { DiamondIcon, SparkleIcon } from "../components/Icons";
@@ -26,30 +26,48 @@ export default function SearchPage({ onSearch }) {
   const suggestions =
     query.trim().length > 0
       ? brands.filter((b) =>
-          b.brandName.toLowerCase().includes(query.trim().toLowerCase()),
+          b.toLowerCase().includes(query.trim().toLowerCase()),
         )
       : [];
 
-  const handleSelect = (brand) => {
-    setQuery(brand.brandName);
-    setError("");
-    onSearch([brand]);
+  const handleSelect = async (brandName) => {
+    try {
+      setError("");
+      const products = await fetchBrandProducts(brandName);
+
+      onSearch([
+        {
+          brandName,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch products");
+    }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const trimmed = query.trim();
     if (!trimmed) return;
 
-    const match = brands.find(
-      (b) => b.brandName.toLowerCase() === trimmed.toLowerCase(),
-    );
+    try {
+      setError("");
+      const products = await fetchBrandProducts(trimmed);
 
-    if (match) {
-      onSearch([match]);
-    } else {
-      setError(
-        `No results found for "${trimmed}". Try one of the suggestions below.`,
-      );
+      if (!products.length) {
+        setError(`No products found for "${trimmed}"`);
+        return;
+      }
+
+      onSearch([
+        {
+          name: trimmed,
+          products,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch products");
     }
   };
 
@@ -157,7 +175,7 @@ export default function SearchPage({ onSearch }) {
               <div className="absolute top-[64px] left-0 right-0 z-20 border border-[#1e1e1e] rounded-xl overflow-hidden bg-[#0d0d0d] inner-shadow animate-fade-in">
                 {suggestions.map((b) => (
                   <button
-                    key={b.id}
+                    key={b}
                     onClick={() => handleSelect(b)}
                     className="
                       w-full flex items-center justify-between
@@ -169,11 +187,7 @@ export default function SearchPage({ onSearch }) {
                   >
                     <div className="flex flex-col gap-0.5">
                       <span className="font-syne text-[13px] font-semibold text-[#ccc] group-hover:text-white transition-colors">
-                        {b.brandName}
-                      </span>
-                      <span className="text-[10px] text-[#333]">
-                        {b.products.length} product
-                        {b.products.length !== 1 ? "s" : ""}
+                        {b}
                       </span>
                     </div>
                     <span className="text-[10px] text-gold/50 group-hover:text-gold transition-colors tracking-widest uppercase">
@@ -233,7 +247,7 @@ export default function SearchPage({ onSearch }) {
             <div className="flex flex-wrap justify-center gap-2">
               {brands.map((b) => (
                 <button
-                  key={b.id}
+                  key={b}
                   onClick={() => handleSelect(b)}
                   className="
                     text-[11px] text-white border border-[#1a1a1a]
@@ -243,7 +257,7 @@ export default function SearchPage({ onSearch }) {
                     bg-[#0d0d0d]
                   "
                 >
-                  {b.brandName}
+                  {b}
                 </button>
               ))}
             </div>
