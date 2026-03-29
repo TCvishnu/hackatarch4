@@ -1,5 +1,7 @@
 // src/pages/ProductDetailPage.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { optimizeProduct, fetchOptimizationHistory } from "../api";
+
 import {
   DiamondIcon,
   DiamondFilledIcon,
@@ -29,11 +31,11 @@ function getTodayContext() {
 }
 
 export default function ProductDetailPage({ product, brandName, onBack }) {
-  const [history, setHistory] = useState(product.history);
+  const [history, setHistory] = useState([]);
   const [expandedRow, setExpandedRow] = useState(null);
   const [running, setRunning] = useState(false);
   const [runDone, setRunDone] = useState(false);
-  const [pageTitle, setPageTitle] = useState(product.name);
+  const [pageTitle, setPageTitle] = useState(product.product_name);
   const [titleUpdated, setTitleUpdated] = useState(false);
 
   const OPENAI_API_KEY = ""; // Replace with actual key
@@ -46,121 +48,78 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
   const [currentDeepDiveContext, setCurrentDeepDiveContext] = useState("");
 
   const handleRunAgent = async () => {
-    if (running) return;
     setRunning(true);
     setRunDone(false);
-    setTitleUpdated(false);
-
-    const last = history[history.length - 1];
-    const currentPrice = last?.suggestion ?? product.price;
 
     try {
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "system",
-                content: `You are an Amazon pricing optimization AI agent.
-Given a product's current price, pricing history, and today's date context, suggest an optimal new price.
-Also decide if the page title (product name) should be updated for any seasonal/occasion reason.
-Only change the title if relevant; otherwise keep the same.
-Respond ONLY with a valid JSON object:
-{
-  "suggestedPrice": <number>,
-  "reason": "<2-3 sentence pricing explanation>",
-  "title": "<updated product title or same as original>",
-  "titleChanged": <true|false>,
-  "salesImpact": "<Estimated sales impact>"
-}`,
-              },
-              {
-                role: "user",
-                content: `Product: ${product.name}
-ASIN: ${product.asin}
-Brand: ${brandName}
-Today's date: ${getTodayContext()}
-Current price going into this run: $${currentPrice.toFixed(2)}
+      const result = await optimizeProduct(product.asin);
 
-Pricing history (${history.length} previous runs):
-${history
-  .map(
-    (h) =>
-      `- ${h.date}: listed at $${h.price.toFixed(2)}, AI suggested $${h.suggestion.toFixed(2)} — "${h.reason}"`,
-  )
-  .join("\n")}
+      // Refresh history so new row appears at top
+      const data = await fetchOptimizationHistory(product.asin);
 
-Based on these trends and today's date context, what should the next optimal price be? And should the product title be updated?`,
-              },
-            ],
-            temperature: 0.7,
-            max_tokens: 1000,
-          }),
-        },
-      );
+      const formatted = data.map((row) => ({
+        date: new Date(row.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        price: Number(row.current_price),
+        suggestion: Number(row.recommended_price),
+        reason: row.reasoning,
+        titleSuggestion: row.suggested_title,
+        salesImpact: "",
+        rawContext: row.context, // ← add this
+      }));
 
-      const data = await response.json();
-      const text = data.choices?.[0]?.message?.content ?? "";
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      setHistory(formatted.reverse());
 
-      if (
-        parsed.titleChanged &&
-        parsed.title &&
-        parsed.title !== product.name
-      ) {
-        setPageTitle(parsed.title);
+      // Update page title if agent suggested one
+      const suggestedTitle = result.decision?.suggested_title;
+      if (suggestedTitle && suggestedTitle !== product.product_name) {
+        setPageTitle(suggestedTitle);
         setTitleUpdated(true);
       }
 
-      const newEntry = {
-        date: getTodayLabel(),
-        price: currentPrice,
-        suggestion: parseFloat(parseFloat(parsed.suggestedPrice).toFixed(2)),
-        reason: parsed.reason,
-        titleSuggestion:
-          parsed.titleChanged && parsed.title && parsed.title !== product.name
-            ? parsed.title
-            : null,
-        salesImpact:
-          parsed.salesImpact ||
-          "No significant sales impact estimate available.",
-      };
-
-      setHistory((prev) => {
-        setExpandedRow(0);
-        return [newEntry, ...prev];
-      });
-
       setRunDone(true);
+      // Auto-expand the newest row
+      setExpandedRow(0);
     } catch (err) {
-      console.error("Agent error:", err);
-      const fallback = {
-        date: getTodayLabel(),
-        price: currentPrice,
-        suggestion: parseFloat((currentPrice * 0.97).toFixed(2)),
-        reason:
-          "AI request failed. Defaulting to a conservative 3% price reduction based on recent trends.",
-        titleSuggestion: null,
-        salesImpact:
-          "Estimated slight increase in sales due to lower fallback price.",
-      };
-      setHistory((prev) => {
-        setExpandedRow(0);
-        return [fallback, ...prev];
-      });
-      setRunDone(true);
+      console.error("Agent run failed", err);
     } finally {
       setRunning(false);
     }
   };
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const data = await fetchOptimizationHistory(product.asin);
+        // map DB → UI format
+        const formatted = data.map((row) => ({
+          date: new Date(row.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          price: Number(row.current_price),
+          suggestion: Number(row.recommended_price),
+          reason: row.reasoning,
+          titleSuggestion: row.suggested_title,
+          salesImpact: "",
+          // In loadHistory useEffect AND handleRunAgent — parse context safely
+          rawContext:
+            typeof row.context === "string"
+              ? JSON.parse(row.context)
+              : row.context,
+        }));
+
+        setHistory(formatted.reverse() || []); // latest first
+      } catch (err) {
+        setHistory([]);
+        console.error("Failed to load history", err);
+      }
+    };
+
+    loadHistory();
+  }, [product.asin]);
 
   const latestSuggestion = history[0]?.suggestion ?? product.price;
   const priceDiff = latestSuggestion - product.price;
@@ -197,7 +156,7 @@ Based on these trends and today's date context, what should the next optimal pri
               </div>
               {titleUpdated && (
                 <p className="text-[10px] text-[#333] tracking-wide mb-0.5 line-through">
-                  {product.name}
+                  {product.product_name}
                 </p>
               )}
               <p className="text-[10px] text-[#383838] tracking-wide">
@@ -207,8 +166,8 @@ Based on these trends and today's date context, what should the next optimal pri
           </div>
           {/* Run Agent Button */}
           <button
-            onClick={handleRunAgent}
             disabled={running}
+            onClick={handleRunAgent}
             className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-[12px] font-medium tracking-[0.04em] border transition-all duration-200 ${
               running
                 ? "border-[#222] text-[#444] bg-[#0d0d0d] cursor-not-allowed"
@@ -239,12 +198,12 @@ Based on these trends and today's date context, what should the next optimal pri
           {[
             {
               label: "Current Price",
-              value: `$${product.price.toFixed(2)}`,
+              value: `$${Number(product.price).toFixed(2)}`,
               color: "text-white",
             },
             {
               label: "Latest AI Suggestion",
-              value: `$${latestSuggestion.toFixed(2)}`,
+              value: `$${latestSuggestion}`,
               color: "text-gold",
             },
             {
@@ -321,7 +280,7 @@ Based on these trends and today's date context, what should the next optimal pri
                     <SparkleIcon className="opacity-70 flex-shrink-0" />$
                     {row.suggestion.toFixed(2)}
                   </span>
-                  <span className="text-[12px] text-[#888] self-center truncate pr-3">
+                  <span className="text-[12px] text-[#888] self-center">
                     {row.titleSuggestion ? (
                       <span className="text-gold font-medium">
                         {row.titleSuggestion}
@@ -365,9 +324,49 @@ Based on these trends and today's date context, what should the next optimal pri
                         </div>
                         <button
                           onClick={() => {
-                            setCurrentDeepDiveContext(
-                              `Product: ${product.name}\nASIN: ${product.asin}\nBrand: ${brandName}\nAI Reasoning: ${row.reason}`,
-                            );
+                            const ctx =
+                              typeof row.rawContext === "string"
+                                ? JSON.parse(row.rawContext)
+                                : row.rawContext;
+
+                            const features =
+                              ctx?.features ?? ctx?.input?.features ?? {};
+                            const computed = ctx?.execution?.computed ?? {};
+                            const reasoning =
+                              ctx?.reasoning_agent?.output ?? {};
+                            const inputData = ctx?.input ?? {};
+
+                            const deepDiveContext = `
+You are an expert Amazon pricing analyst. You have full visibility into how this pricing decision was made.
+
+=== PRODUCT ===
+Name: ${product.product_name}
+ASIN: ${product.asin}
+Brand: ${brandName}
+Current Price: $${row.price}
+Recommended Price: $${row.suggestion}
+
+=== MARKET FEATURES ===
+Price Gap vs Competitors: ${features.price_gap}
+Avg Competitor Price: ${(features.competitor_prices ?? []).join(", ")}
+Avg Conversion Rate: ${features.avg_conversion_rate}
+Conversion Trend: ${features.conversion_trend}
+Buy Box %: ${features.buy_box_percentage}
+
+=== CODE AGENT COMPUTATION ===
+${JSON.stringify(computed, null, 2)}
+
+=== REASONING AGENT OUTPUT ===
+${JSON.stringify(reasoning, null, 2)}
+
+=== RAW METRICS (last 7 days) ===
+${JSON.stringify(inputData?.metrics ?? [], null, 2)}
+
+Answer questions about WHY this price was chosen, what risks exist, and what actions the seller should take.
+  `.trim();
+
+                            setCurrentDeepDiveContext(deepDiveContext);
+                            setChatMessages([]);
                             setChatOpen(true);
                           }}
                           className="mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold"

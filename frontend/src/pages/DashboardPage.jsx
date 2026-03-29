@@ -1,4 +1,6 @@
 // src/pages/DashboardPage.jsx
+import { useEffect, useState } from "react";
+import { fetchBrandProducts } from "../api";
 
 import {
   DiamondIcon,
@@ -7,8 +9,37 @@ import {
 } from "../components/Icons";
 
 export default function DashboardPage({ brands, onSelectProduct, onBack }) {
-  const brand = brands[0]; // We always show one searched brand
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const brandName = brands[0]?.brandName;
+
+  useEffect(() => {
+    if (!brandName) return;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        const products = await fetchBrandProducts(brandName);
+
+        setData([
+          {
+            id: brandName,
+            brandName,
+            products,
+          },
+        ]);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [brandName]);
+
+  const brand = data[0];
   return (
     <div className="relative min-h-screen bg-[#080808] font-mono text-[#e2e2e2]">
       {/* ── Top bar ─────────────────────────────────────── */}
@@ -57,7 +88,7 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
 
       {/* ── Content ─────────────────────────────────────── */}
       <main className="relative z-10 max-w-4xl mx-auto px-8 py-8 flex flex-col gap-5">
-        {brands.map((b, brandIdx) => (
+        {data.map((b, brandIdx) => (
           <div
             key={b.id}
             className={`
@@ -82,7 +113,7 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
             <div className="flex flex-col divide-y divide-[#111]">
               {b.products.map((product, pIdx) => (
                 <div
-                  key={product.id}
+                  key={product.asin}
                   className={`
                     flex items-center justify-between px-6 py-4
                     group hover:bg-[#0f0f0f] transition-all duration-200
@@ -92,19 +123,20 @@ export default function DashboardPage({ brands, onSelectProduct, onBack }) {
                   {/* Product info */}
                   <div className="flex flex-col gap-2 min-w-0 flex-1 pr-4">
                     <span className="font-syne text-[13px] font-semibold text-[#d8d8d8] group-hover:text-white transition-colors duration-150 truncate">
-                      {product.name}
+                      {product.product_name}
                     </span>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] text-[#484848] bg-[#111] border border-[#1e1e1e] rounded-md px-2 py-0.5 tracking-[0.06em]">
                         {product.asin}
                       </span>
                       <span className="text-[11px] text-[#666] font-medium">
-                        ${product.price.toFixed(2)}
+                        $
+                        {product.price ? Number(product.price).toFixed(2) : "—"}
                       </span>
-                      <span className="text-[10px] text-[#2e2e2e]">
+                      {/* <span className="text-[10px] text-[#2e2e2e]">
                         {product.history.length} run
                         {product.history.length !== 1 ? "s" : ""}
-                      </span>
+                      </span> */}
                     </div>
                   </div>
 

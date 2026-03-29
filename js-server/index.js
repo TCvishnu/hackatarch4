@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import pool from "./db.js";
+import cors from "cors";
 
 import {
   getOptimizationData,
@@ -14,6 +15,20 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      const allowed = ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+      if (!origin || allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+  }),
+);
 
 app.get("/", async (req, res) => {
   const result = await pool.query("SELECT NOW()");
@@ -47,15 +62,18 @@ app.get("/optimization-history/:asin", async (req, res) => {
     const result = await pool.query(
       `
       SELECT 
-        asin,
-        product_name,
-        current_price,
-        recommended_price,
-        reasoning,
-        created_at
-      FROM product_price_optimization_history
-      WHERE asin = $1
-      ORDER BY created_at DESC
+        p.asin,
+        p.product_name,
+        po.current_price,
+        po.recommended_price,
+        po.reasoning,
+        po.suggested_title,
+        po.created_at,
+        po.context
+      FROM price_optimizations po
+      JOIN products p ON po.product_id = p.id
+      WHERE p.asin = $1
+      ORDER BY po.created_at DESC
       `,
       [asin],
     );
@@ -125,6 +143,7 @@ app.get("/optimize/:asin", async (req, res) => {
       features,
       computed,
       decision,
+      context,
     });
   } catch (err) {
     console.error(err);

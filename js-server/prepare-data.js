@@ -188,9 +188,11 @@ export function runCode(code, features) {
 export async function reason(features, computed, product) {
   const prompt = `
 You are a pricing optimizer.
+Remember seasonality: 
+If there an any events that may get attracted to this product remember.
 
 Product Title: ${product.product_name}
-
+Today: ${new Date()}
 Features:
 ${JSON.stringify(features)}
 
