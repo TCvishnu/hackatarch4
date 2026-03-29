@@ -62,15 +62,17 @@ app.get("/optimization-history/:asin", async (req, res) => {
     const result = await pool.query(
       `
       SELECT 
-        asin,
-        product_name,
-        current_price,
-        recommended_price,
-        reasoning,
-        created_at
-      FROM product_price_optimization_history
-      WHERE asin = $1
-      ORDER BY created_at DESC
+        p.asin,
+        p.product_name,
+        po.current_price,
+        po.recommended_price,
+        po.reasoning,
+        po.created_at,
+        po.context
+      FROM price_optimizations po
+      JOIN products p ON po.product_id = p.id
+      WHERE p.asin = $1
+      ORDER BY po.created_at DESC
       `,
       [asin],
     );
@@ -140,6 +142,7 @@ app.get("/optimize/:asin", async (req, res) => {
       features,
       computed,
       decision,
+      context,
     });
   } catch (err) {
     console.error(err);

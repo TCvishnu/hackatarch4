@@ -65,8 +65,10 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
         suggestion: Number(row.recommended_price),
         reason: row.reasoning,
         titleSuggestion: row.suggested_title,
-        salesImpact: row.context,
+        salesImpact: "",
+        rawContext: row.context, // ← add this
       }));
+
       setHistory(formatted.reverse());
 
       // Update page title if agent suggested one
@@ -101,7 +103,12 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
           suggestion: Number(row.recommended_price),
           reason: row.reasoning,
           titleSuggestion: row.suggested_title,
-          salesImpact: row.context,
+          salesImpact: "",
+          // In loadHistory useEffect AND handleRunAgent — parse context safely
+          rawContext:
+            typeof row.context === "string"
+              ? JSON.parse(row.context)
+              : row.context,
         }));
 
         setHistory(formatted.reverse() || []); // latest first
@@ -317,9 +324,49 @@ export default function ProductDetailPage({ product, brandName, onBack }) {
                         </div>
                         <button
                           onClick={() => {
-                            setCurrentDeepDiveContext(
-                              `Product: ${product.product_name}\nASIN: ${product.asin}\nBrand: ${brandName}\nAI Reasoning: ${row.reason}`,
-                            );
+                            const ctx =
+                              typeof row.rawContext === "string"
+                                ? JSON.parse(row.rawContext)
+                                : row.rawContext;
+
+                            const features =
+                              ctx?.features ?? ctx?.input?.features ?? {};
+                            const computed = ctx?.execution?.computed ?? {};
+                            const reasoning =
+                              ctx?.reasoning_agent?.output ?? {};
+                            const inputData = ctx?.input ?? {};
+
+                            const deepDiveContext = `
+You are an expert Amazon pricing analyst. You have full visibility into how this pricing decision was made.
+
+=== PRODUCT ===
+Name: ${product.product_name}
+ASIN: ${product.asin}
+Brand: ${brandName}
+Current Price: $${row.price}
+Recommended Price: $${row.suggestion}
+
+=== MARKET FEATURES ===
+Price Gap vs Competitors: ${features.price_gap}
+Avg Competitor Price: ${(features.competitor_prices ?? []).join(", ")}
+Avg Conversion Rate: ${features.avg_conversion_rate}
+Conversion Trend: ${features.conversion_trend}
+Buy Box %: ${features.buy_box_percentage}
+
+=== CODE AGENT COMPUTATION ===
+${JSON.stringify(computed, null, 2)}
+
+=== REASONING AGENT OUTPUT ===
+${JSON.stringify(reasoning, null, 2)}
+
+=== RAW METRICS (last 7 days) ===
+${JSON.stringify(inputData?.metrics ?? [], null, 2)}
+
+Answer questions about WHY this price was chosen, what risks exist, and what actions the seller should take.
+  `.trim();
+
+                            setCurrentDeepDiveContext(deepDiveContext);
+                            setChatMessages([]);
                             setChatOpen(true);
                           }}
                           className="mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold"
