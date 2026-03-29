@@ -2,6 +2,14 @@ import express from "express";
 import dotenv from "dotenv";
 import pool from "./db.js";
 
+import {
+  getOptimizationData,
+  buildFeatures,
+  generateCode,
+  runCode,
+  reason,
+  saveOptimization,
+} from "./prepare-data.js";
 dotenv.config();
 
 const app = express();
@@ -60,6 +68,67 @@ app.get("/optimization-history/:asin", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch optimization history" });
+  }
+});
+
+app.get("/optimize/:asin", async (req, res) => {
+  try {
+    const data = await getOptimizationData(req.params.asin);
+
+    const features = buildFeatures(data);
+
+    // code agent
+    const { code, prompt: codePrompt } = await generateCode(features);
+
+    let computed;
+    try {
+      computed = runCode(code, features);
+    } catch {
+      computed = {
+        suggested_price: features.current_price * 0.9,
+        fallback: true,
+      };
+    }
+
+    // reasoning agent
+    const { output: decision, prompt: reasonPrompt } = await reason(
+      features,
+      computed,
+      data.product,
+    );
+
+    const context = {
+      input: data,
+      features,
+      code_agent: {
+        prompt: codePrompt,
+        generated_code: code,
+      },
+      execution: {
+        computed,
+      },
+      reasoning_agent: {
+        prompt: reasonPrompt,
+        output: decision,
+      },
+    };
+
+    await saveOptimization(
+      data.product.id,
+      data.price,
+      decision,
+      data.product.product_name,
+      context,
+    );
+
+    res.json({
+      features,
+      computed,
+      decision,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Optimization failed" });
   }
 });
 
