@@ -1,5 +1,10 @@
-import pool from "./db";
+import pool from "./db.js";
 import vm from "node:vm";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function getOptimizationData(asin) {
   const client = await pool.connect();
