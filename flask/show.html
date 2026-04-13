@@ -1,0 +1,832 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Product Analysis Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --yellow: #FFD600;
+      --yellow-dim: #C9A900;
+      --yellow-glow: rgba(255, 214, 0, 0.18);
+      --black: #0A0A0A;
+      --black-card: #141414;
+      --black-border: #222222;
+      --white: #F5F5F5;
+      --muted: #777;
+      --green: #39FF14;
+      --orange: #FF8C00;
+      --red: #FF3232;
+    }
+ 
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+ 
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.08) 3px,
+        rgba(0,0,0,0.08) 4px
+      );
+      z-index: 9999;
+    }
+ 
+    /* ---- HEADER ---- */
+    header {
+      border-bottom: 2px solid var(--yellow);
+      padding: 0 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      background: var(--black);
+      z-index: 100;
+    }
+ 
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.7rem;
+      letter-spacing: 0.15em;
+      color: var(--yellow);
+      text-shadow: 0 0 16px var(--yellow);
+    }
+ 
+    .logo span { color: var(--white); }
+ 
+    .header-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--yellow-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+ 
+    /* ---- SEARCH BAR ---- */
+    .search-section {
+      padding: 2.5rem 2.5rem 1rem;
+      max-width: 900px;
+    }
+ 
+    .search-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--yellow);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      display: block;
+    }
+ 
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+ 
+    .asin-input {
+      background: var(--black-card);
+      border: 1.5px solid var(--black-border);
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      padding: 0.8rem 1.2rem;
+      flex: 1;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .asin-input::placeholder { color: var(--muted); text-transform: none; }
+    .asin-input:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px var(--yellow-glow);
+    }
+ 
+    .btn-analyze {
+      background: var(--yellow);
+      color: var(--black);
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.12em;
+      padding: 0 2rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.2s;
+    }
+    .btn-analyze:hover {
+      background: #fff700;
+      box-shadow: 0 0 20px rgba(255,214,0,0.5);
+      transform: translateY(-1px);
+    }
+    .btn-analyze:active { transform: translateY(0); }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+ 
+    /* ---- MAIN GRID ---- */
+    main {
+      padding: 1.5rem 2.5rem 4rem;
+      display: none;
+      flex-direction: column;
+      gap: 1.75rem;
+      animation: fadeIn 0.4s ease;
+    }
+    main.visible { display: flex; }
+ 
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+ 
+    /* ---- PRODUCT HERO ---- */
+    .product-hero {
+      border: 1.5px solid var(--yellow);
+      background: linear-gradient(135deg, #141414 60%, rgba(255,214,0,0.05));
+      padding: 1.75rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .product-hero::after {
+      content: '';
+      position: absolute;
+      right: -60px; top: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(255,214,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+ 
+    .hero-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+ 
+    .product-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.9rem;
+      letter-spacing: 0.05em;
+      color: var(--yellow);
+      line-height: 1.1;
+      max-width: 600px;
+    }
+ 
+    .hero-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.4rem;
+    }
+ 
+    .asin-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--yellow);
+      color: var(--black);
+      padding: 0.25rem 0.75rem;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+    }
+ 
+    .report-date {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+ 
+    .hero-sub {
+      margin-top: 0.85rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+ 
+    .brand-tag {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .brand-tag strong { color: var(--white); font-weight: 600; }
+ 
+    .category-tag {
+      font-size: 0.75rem;
+      color: var(--yellow-dim);
+      font-family: 'DM Mono', monospace;
+    }
+ 
+    /* ---- OVERALL SCORE BANNER ---- */
+    .score-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.1rem 1.6rem;
+      border: 1.5px solid var(--black-border);
+      background: var(--black-card);
+      flex-wrap: wrap;
+    }
+ 
+    .score-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+ 
+    .score-overall {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.08em;
+    }
+ 
+    .score-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.8rem;
+      letter-spacing: 0.02em;
+      color: var(--yellow);
+      line-height: 1;
+    }
+    .score-num span { font-size: 1.2rem; color: var(--muted); }
+ 
+    .score-dots { display: flex; gap: 8px; align-items: center; }
+    .dot {
+      width: 24px; height: 24px;
+      border-radius: 0;
+      border: 2px solid var(--black-border);
+      background: transparent;
+      transition: background 0.3s;
+    }
+    .dot.filled { background: var(--yellow); border-color: var(--yellow); }
+ 
+    /* ---- METRICS GRID ---- */
+    .section-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      border-left: 3px solid var(--yellow);
+      padding-left: 0.75rem;
+      margin-bottom: 0.9rem;
+    }
+ 
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 1px;
+      background: var(--black-border);
+      border: 1.5px solid var(--black-border);
+    }
+ 
+    .metric-card {
+      background: var(--black-card);
+      padding: 1.2rem 1.3rem;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .metric-card:hover { background: #1c1c1c; }
+ 
+    .metric-key {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.45rem;
+    }
+ 
+    .metric-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: var(--yellow);
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+ 
+    .metric-unit {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+ 
+    /* ---- BAR INDICATOR ---- */
+    .bar-track {
+      height: 3px;
+      background: var(--black-border);
+      margin-top: 0.6rem;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--yellow);
+      width: 0;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+    .bar-fill.above { background: var(--green); }
+    .bar-fill.below { background: var(--orange); }
+ 
+    /* ---- INSIGHTS ---- */
+    .insights-list { display: flex; flex-direction: column; gap: 0.7rem; }
+ 
+    .insight-item {
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--black-border);
+      background: var(--black-card);
+      font-size: 0.875rem;
+      line-height: 1.55;
+      border-left: 3px solid transparent;
+      transition: border-left-color 0.2s, background 0.2s;
+    }
+    .insight-item:hover { background: #1c1c1c; }
+ 
+    .insight-item.good  { border-left-color: var(--green); }
+    .insight-item.warn  { border-left-color: var(--orange); }
+ 
+    .insight-icon {
+      font-size: 1rem;
+      margin-right: 0.5rem;
+    }
+ 
+    /* ---- AI SUGGESTION ---- */
+    .ai-box {
+      border: 1.5px solid var(--yellow);
+      background: linear-gradient(135deg, #141414 40%, rgba(255,214,0,0.04));
+      padding: 1.5rem 1.75rem;
+      position: relative;
+    }
+ 
+    .ai-label {
+      position: absolute;
+      top: -11px; left: 1.2rem;
+      background: var(--black);
+      padding: 0 0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--yellow);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+ 
+    .ai-grid { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+ 
+    .ai-title-suggest {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--white);
+    }
+    .ai-title-suggest .ai-title-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+ 
+    .ai-price-block { text-align: right; }
+    .ai-price-block .label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+    .ai-price-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      color: var(--yellow);
+      line-height: 1;
+    }
+    .ai-confidence {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--yellow-dim);
+      margin-top: 0.2rem;
+    }
+ 
+    /* ---- ERROR / LOADING ---- */
+    .state-msg {
+      padding: 1.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+    }
+    .state-msg.error { color: var(--red); border: 1px solid var(--red); }
+    .state-msg.loading {
+      color: var(--yellow);
+      border: 1px solid var(--yellow);
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+ 
+    /* ---- NTB SECTION ---- */
+    .ntb-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--black-border);
+      border: 1.5px solid var(--black-border);
+    }
+    .ntb-card {
+      background: var(--black-card);
+      padding: 1.2rem 1.3rem;
+    }
+    .ntb-card .metric-key { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .ntb-card .metric-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--white); }
+ 
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--black-border);
+      padding: 1rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+ 
+    @media (max-width: 600px) {
+      header, .search-section, main, footer { padding-left: 1rem; padding-right: 1rem; }
+      .ai-grid { grid-template-columns: 1fr; }
+      .ai-price-block { text-align: left; }
+      .ntb-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+ 
+<header>
+  <div class="logo">AMZN<span>INTEL</span></div>
+  <div class="header-tag">Product Analysis Dashboard v2.0</div>
+</header>
+ 
+<div class="search-section">
+  <span class="search-label">// Enter ASIN to Analyze</span>
+  <div class="search-row">
+    <input type="text" class="asin-input" id="asinInput" placeholder="e.g. B08N5WRWNW" maxlength="20"/>
+    <button class="btn-analyze" id="analyzeBtn" onclick="fetchAnalysis()">ANALYZE</button>
+  </div>
+</div>
+ 
+<!-- Loading / Error states -->
+<div id="stateMsg" style="display:none; padding: 0 2.5rem;"></div>
+ 
+<!-- Main dashboard -->
+<main id="dashboard">
+ 
+  <!-- Hero -->
+  <div class="product-hero">
+    <div class="hero-top">
+      <div class="product-name" id="productName">—</div>
+      <div class="hero-meta">
+        <div class="asin-badge" id="asinBadge">ASIN</div>
+        <div class="report-date" id="reportDate">REPORT DATE: —</div>
+      </div>
+    </div>
+    <div class="hero-sub">
+      <div class="brand-tag">Brand: <strong id="brandVal">—</strong></div>
+      <div class="category-tag" id="categoryVal">—</div>
+    </div>
+  </div>
+ 
+  <!-- Score Banner -->
+  <div class="score-banner">
+    <div>
+      <div class="score-label">Overall Assessment</div>
+      <div class="score-overall" id="overallText">—</div>
+    </div>
+    <div style="display:flex; gap:2rem; align-items:center;">
+      <div class="score-dots" id="scoreDots">
+        <div class="dot" id="d1"></div>
+        <div class="dot" id="d2"></div>
+        <div class="dot" id="d3"></div>
+        <div class="dot" id="d4"></div>
+      </div>
+      <div>
+        <div class="score-label">Score</div>
+        <div class="score-num" id="scoreNum">—<span>/4</span></div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- Core Metrics -->
+  <div>
+    <div class="section-title">Core Performance Metrics</div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-key">Impressions</div>
+        <div class="metric-value" id="mImpressions">—</div>
+        <div class="metric-unit">total views</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Clicks</div>
+        <div class="metric-value" id="mClicks">—</div>
+        <div class="metric-unit">total clicks</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Click-Through Rate</div>
+        <div class="metric-value" id="mCTR">—</div>
+        <div class="metric-unit">vs 3.0% benchmark</div>
+        <div class="bar-track"><div class="bar-fill" id="bCTR"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Cart Adds</div>
+        <div class="metric-value" id="mCartAdds">—</div>
+        <div class="metric-unit">units added</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Cart Add Rate</div>
+        <div class="metric-value" id="mCartRate">—</div>
+        <div class="metric-unit">vs 25% benchmark</div>
+        <div class="bar-track"><div class="bar-fill" id="bCart"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Purchases</div>
+        <div class="metric-value" id="mPurchases">—</div>
+        <div class="metric-unit">total orders</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Purchase Rate</div>
+        <div class="metric-value" id="mPurchaseRate">—</div>
+        <div class="metric-unit">of impressions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Conversion Rate</div>
+        <div class="metric-value" id="mConversion">—</div>
+        <div class="metric-unit">vs 0.3% benchmark</div>
+        <div class="bar-track"><div class="bar-fill" id="bConv"></div></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-key">Revenue</div>
+        <div class="metric-value" id="mRevenue">—</div>
+        <div class="metric-unit">total earned</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- New to Brand -->
+  <div>
+    <div class="section-title">New-to-Brand Metrics</div>
+    <div class="ntb-row">
+      <div class="ntb-card">
+        <div class="metric-key">NTB Purchases</div>
+        <div class="metric-value" id="ntbPurchases">—</div>
+      </div>
+      <div class="ntb-card">
+        <div class="metric-key">NTB Rate</div>
+        <div class="metric-value" id="ntbRate" style="color:var(--yellow)">—</div>
+        <div class="bar-track"><div class="bar-fill" id="bNTB"></div></div>
+      </div>
+      <div class="ntb-card">
+        <div class="metric-key">NTB Revenue</div>
+        <div class="metric-value" id="ntbRevenue">—</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- Insights -->
+  <div>
+    <div class="section-title">AI Performance Insights</div>
+    <div class="insights-list" id="insightsList"></div>
+  </div>
+ 
+  <!-- AI Suggestion -->
+  <div class="ai-box" id="aiBox" style="display:none;">
+    <div class="ai-label">★ AI Suggestion</div>
+    <div class="ai-grid">
+      <div class="ai-title-suggest">
+        <div class="ai-title-label">Suggested Title</div>
+        <div id="aiTitle">—</div>
+      </div>
+      <div class="ai-price-block">
+        <div class="label">Suggested Price</div>
+        <div class="ai-price-value" id="aiPrice">—</div>
+        <div class="ai-confidence" id="aiConf">Confidence: —</div>
+      </div>
+    </div>
+  </div>
+ 
+</main>
+ 
+<footer>
+  <span>AMZNINTEL // BRAND ANALYTICS ENGINE</span>
+  <span id="footerAsin">ASIN: —</span>
+</footer>
+ 
+<script>
+  const API_BASE = 'http://localhost:5001';
+ 
+  function fmt(n, dec = 0) {
+    if (n == null) return '—';
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+  function fmtPct(n) {
+    if (n == null) return '—';
+    return (Number(n) * 100).toFixed(2) + '%';
+  }
+  function fmtMoney(n) {
+    if (n == null) return '—';
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+ 
+  function setBar(id, value, benchmark, maxMultiplier = 2) {
+    const el = document.getElementById(id);
+    if (!el || value == null) return;
+    const pct = Math.min((value / (benchmark * maxMultiplier)) * 100, 100);
+    el.style.width = pct + '%';
+    el.className = 'bar-fill ' + (Number(value) >= benchmark ? 'above' : 'below');
+  }
+ 
+  function showState(msg, type) {
+    const el = document.getElementById('stateMsg');
+    el.innerHTML = `<div class="state-msg ${type}">${type === 'loading' ? '// ' : ''}${msg}</div>`;
+    el.style.display = 'block';
+  }
+  function hideState() {
+    document.getElementById('stateMsg').style.display = 'none';
+  }
+ 
+  async function fetchAnalysis() {
+    const asin = document.getElementById('asinInput').value.trim().toUpperCase();
+    if (!asin) return;
+ 
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+ 
+    document.getElementById('dashboard').classList.remove('visible');
+    showState('Fetching analysis for ' + asin + '...', 'loading');
+ 
+    try {
+      const res = await fetch(`${API_BASE}/analysis/${asin}`);
+      const data = await res.json();
+ 
+      if (!res.ok) {
+        showState('Error: ' + (data.error || 'Unknown error'), 'error');
+        btn.disabled = false;
+        return;
+      }
+ 
+      hideState();
+      populate(data);
+      document.getElementById('dashboard').classList.add('visible');
+ 
+    } catch (e) {
+      showState('Could not reach API — is the Flask server running? (' + e.message + ')', 'error');
+    }
+ 
+    btn.disabled = false;
+  }
+ 
+  function populate(d) {
+    const m = d.metrics;
+    const a = d.analysis;
+ 
+    // Hero
+    document.getElementById('productName').textContent = d.product_name || d.asin;
+    document.getElementById('asinBadge').textContent = d.asin;
+    document.getElementById('reportDate').textContent = 'REPORT DATE: ' + (d.report_date || '—');
+    document.getElementById('brandVal').textContent = d.brand || '—';
+    document.getElementById('categoryVal').textContent = d.category || '—';
+    document.getElementById('footerAsin').textContent = 'ASIN: ' + d.asin;
+ 
+    // Score
+    document.getElementById('overallText').textContent = a.overall;
+    const sc = parseInt(a.score);
+    document.getElementById('scoreNum').innerHTML = sc + '<span>/4</span>';
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById('d' + i).className = 'dot' + (i <= sc ? ' filled' : '');
+    }
+ 
+    // Set overall color
+    const overallEl = document.getElementById('overallText');
+    if (a.overall.includes('🟢')) overallEl.style.color = 'var(--green)';
+    else if (a.overall.includes('🟡')) overallEl.style.color = 'var(--yellow)';
+    else overallEl.style.color = 'var(--red)';
+ 
+    // Metrics
+    document.getElementById('mImpressions').textContent = fmt(m.impressions);
+    document.getElementById('mClicks').textContent = fmt(m.clicks);
+    document.getElementById('mCTR').textContent = fmtPct(m.click_through_rate);
+    document.getElementById('mCartAdds').textContent = fmt(m.cart_adds);
+    document.getElementById('mCartRate').textContent = fmtPct(m.cart_add_rate);
+    document.getElementById('mPurchases').textContent = fmt(m.purchases);
+    document.getElementById('mPurchaseRate').textContent = fmtPct(m.purchase_rate);
+    document.getElementById('mConversion').textContent = fmtPct(m.conversion_rate);
+    document.getElementById('mRevenue').textContent = fmtMoney(m.revenue);
+ 
+    // NTB
+    document.getElementById('ntbPurchases').textContent = fmt(m.new_to_brand_purchases);
+    document.getElementById('ntbRate').textContent = fmtPct(m.new_to_brand_purchase_rate);
+    document.getElementById('ntbRevenue').textContent = fmtMoney(m.new_to_brand_revenue);
+ 
+    // Bars — values are 0-1 decimals, benchmarks same scale
+    setTimeout(() => {
+      setBar('bCTR', m.click_through_rate, 0.030);
+      setBar('bCart', m.cart_add_rate, 0.250);
+      setBar('bConv', m.conversion_rate, 0.003);
+      setBar('bNTB', m.new_to_brand_purchase_rate, 0.500);
+    }, 100);
+ 
+    // Insights
+    const list = document.getElementById('insightsList');
+    list.innerHTML = '';
+    a.insights.forEach(txt => {
+      const isGood = txt.startsWith('✅');
+      const div = document.createElement('div');
+      div.className = 'insight-item ' + (isGood ? 'good' : 'warn');
+      div.textContent = txt;
+      list.appendChild(div);
+    });
+ 
+    // AI suggestion
+    const aiBox = document.getElementById('aiBox');
+    if (d.ai_suggestion) {
+      aiBox.style.display = 'block';
+      document.getElementById('aiTitle').textContent = d.ai_suggestion.suggested_title || '—';
+      document.getElementById('aiPrice').textContent = d.ai_suggestion.suggested_price != null
+        ? '$' + Number(d.ai_suggestion.suggested_price).toFixed(2)
+        : '—';
+      document.getElementById('aiConf').textContent = d.ai_suggestion.confidence_score != null
+        ? 'Confidence: ' + Number(d.ai_suggestion.confidence_score).toFixed(0) + '%'
+        : 'Confidence: —';
+    } else {
+      aiBox.style.display = 'none';
+    }
+  }
+ 
+  // Allow Enter key
+  document.getElementById('asinInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchAnalysis();
+  });
+ 
+  // Demo mode — prefill sample data without hitting API
+  window.loadDemo = function() {
+    populate({
+      asin: "B08N5WRWNW",
+      product_name: "HardShell Pro 28\" Spinner Luggage",
+      brand: "TravelElite",
+      category: "Luggage > Hardside",
+      report_date: "2025-03-01",
+      metrics: {
+        impressions: 184200,
+        clicks: 5820,
+        click_through_rate: 0.0316,
+        cart_adds: 2340,
+        cart_add_rate: 0.4021,
+        purchases: 387,
+        purchase_rate: 0.0021,
+        revenue: 62243.13,
+        conversion_rate: 0.00664,
+        new_to_brand_purchases: 291,
+        new_to_brand_purchase_rate: 0.7519,
+        new_to_brand_revenue: 46821.87
+      },
+      analysis: {
+        overall: "🟢 Strong performance across all metrics.",
+        score: "4",
+        insights: [
+          "✅ CTR 3.16% is above benchmark (3.0%) — listing title/image is compelling.",
+          "✅ Conversion rate 0.66% is above benchmark (0.3%) — product page is converting well.",
+          "✅ Cart-add rate 40.21% is strong (25% benchmark) — high purchase intent.",
+          "✅ 75.19% of buyers are new to brand — strong customer acquisition."
+        ]
+      },
+      ai_suggestion: {
+        suggested_title: "HardShell Pro 28 Inch Spinner Luggage — TSA Approved, Scratch-Resistant, 4-Wheel Glide",
+        suggested_price: 159.99,
+        confidence_score: 87
+      }
+    });
+    document.getElementById('asinInput').value = 'B08N5WRWNW';
+    document.getElementById('dashboard').classList.add('visible');
+    hideState();
+  };
+</script>
+ 
+<!-- Demo hint -->
+<div style="text-align:center; padding: 0.75rem 2.5rem 0; font-family:'DM Mono',monospace; font-size:0.68rem; color:#444; letter-spacing:0.1em;">
+  No backend? <a href="javascript:loadDemo()" style="color:var(--yellow); text-decoration:none;">// LOAD DEMO DATA</a>
+</div>
+ 
+</body>
+</html>
+ 
